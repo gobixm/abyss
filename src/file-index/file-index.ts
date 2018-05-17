@@ -1,5 +1,6 @@
 import * as levelup from 'levelup';
 import * as leveldown from 'leveldown';
+import * as encodingDown from 'encoding-down';
 import * as crypto from 'crypto';
 import * as fsPromise from 'fs/promises';
 import * as path from 'path';
@@ -18,9 +19,9 @@ class FileIndex {
         this._logger = logger;
         const dbpath = path.join(this._root);
 
-        const ld: any = leveldown.default(dbpath);
-
-        this._db = levelup(ld);
+        this._db = levelup(encodingDown.default(leveldown.default(dbpath), {
+            valueEncoding: 'json'
+        }));
     }
 
     private _buildKey(artifactId: string, localPath: string): string {
@@ -48,14 +49,14 @@ class FileIndex {
     async enum(artifactId: string): Promise<FileMeta[]> {
         const options = {
             gte: `${artifactId}:`,
-            lt: `${artifactId}:ff`
+            lt: `${artifactId};`
         };
-        const read = this._db.createReadStream();
+        const read = this._db.createReadStream(options);
 
         return await new Promise<FileMeta[]>((resolve, reject) => {
             let result: FileMeta[] = [];
 
-            read.on('data', (pair: any) => result.push(JSON.parse(pair.value)))
+            read.on('data', (pair: any) => result.push(pair.value));
             read.on('end', () => resolve(result));
             read.on('close', () => resolve(result));
             read.on('error', reject);
@@ -69,8 +70,7 @@ class FileIndex {
 
     private async _get(key: string): Promise<FileMeta | undefined> {
         try {
-            const buffer = await this._db.get(key);
-            return JSON.parse(buffer.toString()) as FileMeta;
+            return await this._db.get(key);
         }
         catch (e) {
             return undefined;
@@ -78,8 +78,7 @@ class FileIndex {
     }
 
     private async _put(key: string, meta: FileMeta): Promise<void> {
-        const buffer = Buffer.from(JSON.stringify(meta));
-        await this._db.put(key, buffer);
+        await this._db.put(key, meta);
     }
 
     private _createInternalPath(localPath: string): string {
