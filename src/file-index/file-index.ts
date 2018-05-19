@@ -43,6 +43,7 @@ class FileIndex {
         const key = this._buildKey(artifactId, localPath);
         const meta = await this._get(key);
         await this._db.del(key);
+        this._translateMeta(meta);
         return meta;
     }
 
@@ -56,7 +57,11 @@ class FileIndex {
         return await new Promise<FileMeta[]>((resolve, reject) => {
             let result: FileMeta[] = [];
 
-            read.on('data', (pair: any) => result.push(pair.value));
+            read.on('data', (pair: any) => {
+                let meta = pair.value;
+                this._translateMeta(meta);
+                result.push(meta);
+            });
             read.on('end', () => resolve(result));
             read.on('close', () => resolve(result));
             read.on('error', reject);
@@ -65,7 +70,13 @@ class FileIndex {
 
     async get(artifactId: string, localPath: string): Promise<FileMeta | undefined> {
         const key = this._buildKey(artifactId, localPath);
-        return await this._get(key);
+        let meta = await this._get(key);
+        this._translateMeta(meta);
+        return meta;
+    }
+
+    async close(): Promise<void> {
+        await this._db.close();
     }
 
     private async _get(key: string): Promise<FileMeta | undefined> {
@@ -73,12 +84,19 @@ class FileIndex {
             return await this._db.get(key);
         }
         catch (e) {
-            return undefined;
+            throw e;
         }
     }
 
     private async _put(key: string, meta: FileMeta): Promise<void> {
         await this._db.put(key, meta);
+    }
+
+    private _translateMeta(meta: FileMeta) {
+        if (!meta) {
+            return;
+        }
+        meta.fileInfo.created = new Date(meta.fileInfo.created);
     }
 
     private _createInternalPath(localPath: string): string {

@@ -63,3 +63,4 @@ typings/
 store
 .vscode
 dist
+test-data

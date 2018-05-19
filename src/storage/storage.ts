@@ -1,5 +1,5 @@
 import { FileUtils } from './../utils/file-utils';
-import { Stream } from 'stream';
+import { Stream, Readable } from 'stream';
 import { FileIndex } from '../file-index';
 import { FileStorage } from '../file-storage';
 import * as path from 'path';
@@ -18,7 +18,7 @@ class Storage {
         this._logger = logger;
     }
 
-    async save(artifactId: string, fileInfo: FileInfo, fileContent: Stream): Promise<void> {
+    async save(artifactId: string, fileInfo: FileInfo, fileContent: Readable): Promise<void> {
         const meta = await this._fileIndex.save(artifactId, fileInfo);
         await this._fileStorage.save(artifactId, meta, fileContent);
     }

@@ -3,7 +3,7 @@ import * as fsPromise from 'fs/promises';
 import * as fs from 'fs';
 import * as del from 'del';
 import * as path from 'path';
-import { Stream } from 'stream';
+import { Stream, Readable } from 'stream';
 import { FileMeta } from '../model';
 import { FileUtils } from '../utils/file-utils';
 
@@ -18,7 +18,7 @@ class FileStorage {
         this._logger = logger;
     }
 
-    async save(artifactId: string, fileMeta: FileMeta, content: Stream): Promise<void> {
+    async save(artifactId: string, fileMeta: FileMeta, content: Readable): Promise<void> {
         const filePath = this._getInternalPath(artifactId, fileMeta);
 
         let destStream: fs.WriteStream = undefined;
@@ -30,11 +30,11 @@ class FileStorage {
         }
 
         try {
-            content.pipe(destStream);
-            content.on('end', () => destStream.end());
             await new Promise((resolve, reject) => {
-                destStream.on('end', resolve);
+                content.pipe(destStream);
+
                 destStream.on('error', reject);
+                destStream.on('finish', resolve);
             });
             this._logger.debug(fileMeta, `file saved at ${filePath}`);
         }
@@ -69,15 +69,13 @@ class FileStorage {
         }
     }
 
-    async openRead(artifactId: string, fileMeta: FileMeta): Promise<Stream> {
+    async openRead(artifactId: string, fileMeta: FileMeta): Promise<Readable> {
         const filePath = this._getInternalPath(artifactId, fileMeta);
-        try {
-            return fs.createReadStream(filePath);
-        }
-        catch (e) {
-            this._logger.error(e, 'failed to get file content');
-            throw new Error(`failed to get file content ${filePath}`);
-        }
+        return new Promise<Readable>((resolve, reject) => {
+            const stream = fs.createReadStream(filePath);
+            stream.on('error', reject);
+            stream.on('open', () => resolve(stream));
+        });
     }
 
     getTempDir(): string {

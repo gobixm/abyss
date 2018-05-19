@@ -25,7 +25,13 @@ storageRouter.post('/:id', async ctx => {
 
     await new Promise((resolve, reject) => {
         form.parse(ctx.request.req, (err: any, fields, files) => {
-            const path = files[Object.keys(files)[0]].path;
+            const key = Object.keys(files)[0];
+            const file = files[key];
+            if (!file) {
+                reject(new Error('file required'));
+                return;
+            }
+            const path = file.path;
             const fileInfo: FileInfo = {
                 created: new Date(fields.created as string),
                 path: fields.path as string
