@@ -6,21 +6,36 @@ import * as path from 'path';
 import { FileInfo, FileMeta } from '../model';
 import * as fsPromise from 'fs/promises';
 import { Log } from '../logging';
+import { ArtifactIndex } from '../artifact-index';
 
 class Storage {
     private _fileIndex: FileIndex;
     private _fileStorage: FileStorage;
+    private _artifactIndex: ArtifactIndex;
     private _logger: Log;
 
-    private constructor(logger: Log, fileIndex: FileIndex, fileStorage: FileStorage) {
+    private constructor(logger: Log, fileIndex: FileIndex, fileStorage: FileStorage, artifactIndex: ArtifactIndex) {
         this._fileIndex = fileIndex;
         this._fileStorage = fileStorage;
+        this._artifactIndex = artifactIndex;
         this._logger = logger;
     }
 
-    async save(artifactId: string, fileInfo: FileInfo, fileContent: Readable): Promise<void> {
+    async saveFile(artifactId: string, fileInfo: FileInfo, fileContent: Readable): Promise<void> {
         const meta = await this._fileIndex.save(artifactId, fileInfo);
         await this._fileStorage.save(artifactId, meta, fileContent);
+    }
+
+    async createArtifact(artifactId: string): Promise<void> {
+        await this._artifactIndex.save(artifactId);
+    }
+
+    async removeArtifact(artifactId: string): Promise<void> {
+        await this._artifactIndex.remove(artifactId);
+        const metas = await this._fileIndex.removeArtifact(artifactId);
+        for (const meta of metas) {
+            await this._fileStorage.remove(artifactId, meta);
+        }
     }
 
     async moveInto(artifactId: string, fileInfo: FileInfo, filePath: string): Promise<void> {
@@ -28,13 +43,21 @@ class Storage {
         await this._fileStorage.moveInto(artifactId, meta, filePath);
     }
 
-    async remove(artifactId: string, localPath: string): Promise<void> {
+    async removeFile(artifactId: string, localPath: string): Promise<void> {
         const meta = await this._fileIndex.remove(artifactId, localPath);
         await this._fileStorage.remove(artifactId, meta);
     }
 
-    async enum(artifactId: string): Promise<FileMeta[]> {
+    async enumFiles(artifactId: string): Promise<FileMeta[]> {
         return await this._fileIndex.enum(artifactId);
+    }
+
+    async enumArtifacts(pattern: string, take: number | 'all'): Promise<string[]> {
+        return await this._artifactIndex.enumStarts(pattern, take);
+    }
+
+    async enumArtifactsFrom(pattern: string, take: number | 'all'): Promise<string[]> {
+        return await this._artifactIndex.enumNext(pattern, take);
     }
 
     async openRead(artifactId: string, localPath: string): Promise<Stream> {
@@ -50,10 +73,11 @@ class Storage {
         logger.info({ path: root }, 'initializing storage');
         await FileUtils.mkdir(root);
 
-        const indexStore = await FileIndex.open(path.join(root, 'index'), logger);
+        const fileIndex = await FileIndex.open(path.join(root, 'file-index'), logger);
+        const artifactIndex = await ArtifactIndex.open(path.join(root, 'artifact-index'), logger);
         const fileStore = await FileStorage.open(path.join(root, 'files'), logger);
 
-        return new Storage(logger, indexStore, fileStore);
+        return new Storage(logger, fileIndex, fileStore, artifactIndex);
     }
 
     static async create(logger: Log): Promise<Storage> {

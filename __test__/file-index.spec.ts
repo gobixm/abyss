@@ -40,6 +40,23 @@ it('remove record deleted', async () => {
     expect(removed.fileInfo).toEqual(fileInfo);
 });
 
+it('remove records deleted with artifact', async () => {
+    let fileInfo1: FileInfo = {
+        created: new Date(42),
+        path: 'path1'
+    };
+    let fileInfo2: FileInfo = {
+        created: new Date(42),
+        path: 'path2'
+    };
+    let saved1 = await index.save('artifact', fileInfo1);
+    let saved2 = await index.save('artifact', fileInfo2);
+    let removed = await index.removeArtifact('artifact');
+
+    await expect(index.get('artifact', fileInfo1.path)).rejects.toBeTruthy();
+    await expect(index.get('artifact', fileInfo2.path)).rejects.toBeTruthy();
+});
+
 it('enum all records inside artifact', async () => {
     let fileInfo1: FileInfo = {
         created: new Date(42),

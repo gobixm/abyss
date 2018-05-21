@@ -1,16 +1,13 @@
 import * as levelup from 'levelup';
 import * as leveldown from 'leveldown';
 import * as encodingDown from 'encoding-down';
-import * as crypto from 'crypto';
-import * as fsPromise from 'fs/promises';
 import * as path from 'path';
 import { FileInfo, FileMeta } from '../model';
 import { FileUtils } from '../utils/file-utils';
-import { json } from 'body-parser';
 import { Log } from '../logging';
 
 class FileIndex {
-    _db: any;
+    private _db: any;
     private _root: string;
     private _logger: Log;
 
@@ -45,6 +42,14 @@ class FileIndex {
         await this._db.del(key);
         this._translateMeta(meta);
         return meta;
+    }
+
+    async removeArtifact(artifactId: string): Promise<FileMeta[]> {
+        const result = await this.enum(artifactId);
+        const batch = result.map(meta => ({ type: 'del', key: this._buildKey(artifactId, meta.fileInfo.path) }));
+
+        await this._db.batch(batch);
+        return result;
     }
 
     async enum(artifactId: string): Promise<FileMeta[]> {

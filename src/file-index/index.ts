@@ -1,1 +1,1 @@
-export * from './file-index'
+export * from './file-index';
