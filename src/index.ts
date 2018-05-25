@@ -5,7 +5,7 @@ import { apiRouter } from './api';
 import { createLogger } from './logging';
 
 const logger = createLogger();
-const port = 8080;
+const port = 8090;
 
 abyss.init(logger)
     .then(() => {

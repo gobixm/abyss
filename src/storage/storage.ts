@@ -52,12 +52,12 @@ class Storage {
         return await this._fileIndex.enum(artifactId);
     }
 
-    async enumArtifacts(pattern: string, take: number | 'all'): Promise<string[]> {
-        return await this._artifactIndex.enumStarts(pattern, take);
-    }
-
-    async enumArtifactsFrom(pattern: string, take: number | 'all'): Promise<string[]> {
-        return await this._artifactIndex.enumNext(pattern, take);
+    async enumArtifacts(pattern: string, take: number | 'all', takeFrom: string | undefined): Promise<string[]> {
+        if (takeFrom === undefined) {
+            return await this._artifactIndex.enumStarts(pattern, take);
+        } else {
+            return await this._artifactIndex.enumNext(pattern, take, takeFrom);
+        }
     }
 
     async openRead(artifactId: string, localPath: string): Promise<Stream> {

@@ -51,9 +51,12 @@ it('enumNext pattern tail', async () => {
     await index.save('ac');
     await index.save('aca');
     await index.save('acb');
+    await index.save('acц');
+    await index.save('acя');
+    await index.save('ac');
     await index.save('b');
 
-    let result = await index.enumNext('ac', 'all');
+    let result = await index.enumNext('ac', 'all', 'acb');
 
-    expect(result).toEqual(['aca', 'acb']);
+    expect(result).toEqual(['acц', 'acя']);
 });

@@ -41,9 +41,9 @@ class ArtifactIndex {
         return await this.enum(options, take);
     }
 
-    async enumNext(pattern: string, take: number | 'all'): Promise<string[]> {
+    async enumNext(pattern: string, take: number | 'all', takeFrom: string): Promise<string[]> {
         const options = {
-            gt: `${pattern}`,
+            gt: `${takeFrom}`,
             lte: `${pattern}\uffff`,
             limit: take === 'all' ? -1 : take
         };

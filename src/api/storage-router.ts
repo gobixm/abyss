@@ -15,7 +15,9 @@ storageRouter.get('/:id', async ctx => {
 storageRouter.get('/', async ctx => {
     const pattern = ctx.query.pattern ? ctx.query.pattern : '';
     const take = ctx.query.take ? Number.parseInt(ctx.query.take) : 'all';
-    ctx.body = await abyss.storage.enumArtifacts(pattern, take);
+    const takeFrom = ctx.query.takeFrom ? ctx.query.takeFrom : undefined;
+
+    ctx.body = await abyss.storage.enumArtifacts(pattern, take, takeFrom);
 });
 
 storageRouter.get('/:id/file/:path', async ctx => {
