@@ -1,4 +1,5 @@
 import * as Koa from 'koa';
+import * as koaCors from '@koa/cors';
 import * as Http2 from 'http2';
 import { abyss } from './abyss';
 import { apiRouter } from './api';
@@ -11,6 +12,7 @@ abyss.init(logger)
     .then(() => {
         logger.info({ port: port }, 'starting service');
         const app = new Koa();
+        app.use(koaCors());
         app.use(apiRouter.routes());
         app.use(async (ctx, next) => {
             try {
